@@ -9,6 +9,12 @@ import { extractContext } from "./extractor.js";
 import { buildMarkdown } from "./formatter.js";
 import { saveMarkdown } from "./formatter.js";
 import clipboard from "clipboardy";
+import { getHistory } from "./history.js";
+import chalk from "chalk";
+import { statSync } from "fs";
+import { join } from "path";
+
+let outDir = "./output";
 
 program
   .name("cb")
@@ -28,9 +34,11 @@ program
     const cleaned = cleanTranscript(raw);
     const chunks = chunkTranscript(cleaned);
     console.log(
-      `Loaded transcript — ${cleaned.length} chars, ${chunks.length} chunk(s)`,
+      chalk.yellow(
+        `Loaded transcript — ${cleaned.length} chars, ${chunks.length} chunk(s)`,
+      ),
     );
-    console.log("Extracting context...");
+    console.log(chalk.yellow("Extracting context..."));
 
     const result = await extractContext(chunks);
     const markdown = buildMarkdown(result);
@@ -38,8 +46,27 @@ program
 
     clipboard.writeSync(markdown);
 
-    console.log(`\nHandoff saved to: ${filepath}`);
-    console.log(`Handoff copied to clipboard`);
+    console.log(chalk.green(`\nHandoff saved to: ${filepath}`));
+    console.log(chalk.green("Handoff copied to clipboard"));
+  });
+
+program
+  .command("history")
+  .description("List past compressions")
+  .action(() => {
+    const files = getHistory(outDir);
+    console.log(chalk.green(`\nPast handoffs (${files.length}):\n`));
+
+    files
+      .map((f) => ({
+        name: f,
+        time: statSync(join(outDir, f)).mtime,
+      }))
+      .sort((a, b) => b.time - a.time)
+      .forEach((f, i) => {
+        console.log(`${i + 1}. ${f.name}`);
+        console.log(`   ${f.time.toLocaleString()}\n`);
+      });
   });
 
 program.parse();
