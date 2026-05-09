@@ -8,6 +8,7 @@ import {
 import { extractContext } from "./extractor.js";
 import { buildMarkdown } from "./formatter.js";
 import { saveMarkdown } from "./formatter.js";
+import clipboard from "clipboardy";
 
 program
   .name("cb")
@@ -35,7 +36,10 @@ program
     const markdown = buildMarkdown(result);
     const filepath = saveMarkdown(markdown, options.out);
 
-    console.log(`\n✅ Handoff saved to: ${filepath}`);
+    clipboard.writeSync(markdown);
+
+    console.log(`\nHandoff saved to: ${filepath}`);
+    console.log(`Handoff copied to clipboard`);
   });
 
 program.parse();
