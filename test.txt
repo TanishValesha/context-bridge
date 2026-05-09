@@ -1,0 +1,1 @@
+We were building a todo app in React. We finished the AddTask component but the delete button is broken.

@@ -6,6 +6,8 @@ import {
   cleanTranscript,
 } from "./preprocessor.js";
 import { extractContext } from "./extractor.js";
+import { buildMarkdown } from "./formatter.js";
+import { saveMarkdown } from "./formatter.js";
 
 program
   .name("cb")
@@ -30,8 +32,10 @@ program
     console.log("Extracting context...");
 
     const result = await extractContext(chunks);
-    console.log("\nExtracted:");
-    console.log(JSON.stringify(result, null, 2));
+    const markdown = buildMarkdown(result);
+    const filepath = saveMarkdown(markdown, options.out);
+
+    console.log(`\n✅ Handoff saved to: ${filepath}`);
   });
 
 program.parse();
