@@ -1,8 +1,23 @@
 import "dotenv/config";
+import Groq from "groq-sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { buildMetaPrompt, buildCodePrompt } from "./prompt.js";
+import {
+  buildMetaPrompt,
+  buildCodePrompt,
+  buildMergePrompt,
+} from "./prompt.js";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+async function callGroq(prompt) {
+  const response = await groq.chat.completions.create({
+    model: "openai/gpt-oss-120b",
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.2,
+  });
+  return response.choices[0].message.content;
+}
 
 async function callGemini(prompt) {
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -28,21 +43,34 @@ function parseCodeSnippets(text) {
 }
 
 export async function extractContext(chunks) {
-  const results = [];
+  // process all chunks in parallel
+  const results = await Promise.all(
+    chunks.map(async (chunk) => {
+      const [metaText, codeText] = await Promise.all([
+        callGroq(buildMetaPrompt(chunk)),
+        callGroq(buildCodePrompt(chunk)),
+      ]);
 
-  for (const chunk of chunks) {
-    // call 1 — extract meta (no code)
-    const metaText = await callGemini(buildMetaPrompt(chunk));
-    const metaMatch = metaText.match(/\{[\s\S]*\}/);
-    if (!metaMatch) throw new Error("No JSON found in meta response");
-    const meta = JSON.parse(metaMatch[0]);
+      const metaMatch = metaText.match(/\{[\s\S]*\}/);
+      if (!metaMatch) throw new Error("No JSON found in meta response");
+      const meta = JSON.parse(metaMatch[0]);
 
-    // call 2 — extract code snippets separately
-    const codeText = await callGemini(buildCodePrompt(chunk));
-    const code_snippets = parseCodeSnippets(codeText);
+      const code_snippets = parseCodeSnippets(codeText);
 
-    results.push({ ...meta, code_snippets });
-  }
+      return { ...meta, code_snippets };
+    }),
+  );
 
-  return results[0];
+  // if only one chunk, return directly
+  if (results.length === 1) return results[0];
+
+  // merge all chunks into one
+  const mergeText = await callGroq(buildMergePrompt(results));
+  const mergeMatch = mergeText.match(/\{[\s\S]*\}/);
+  if (!mergeMatch) throw new Error("No JSON found in merge response");
+  const merged = JSON.parse(mergeMatch[0]);
+
+  const allSnippets = results.flatMap((r) => r.code_snippets);
+
+  return { ...merged, code_snippets: allSnippets };
 }

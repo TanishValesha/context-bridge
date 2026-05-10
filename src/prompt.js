@@ -33,3 +33,26 @@ If there are no code snippets, return exactly: NONE
 Transcript:
 ${transcript}`;
 }
+
+export function buildMergePrompt(results) {
+  return `You are a context merger. You have multiple JSON summaries extracted from different parts of the same AI session transcript. Merge them into one coherent summary.
+
+Rules:
+- Combine all decisions, open_questions, dead_ends into single arrays without duplicates
+- Write a single coherent goal and current_state from all parts
+- The current_state should reflect the LATEST state (last chunk is most recent)
+- The resume_prompt should cover the full session
+- Return ONLY this JSON with no markdown fences:
+
+{
+  "goal": "one line - what are we building/solving",
+  "current_state": "where we left off exactly",
+  "decisions": ["decision + reason"],
+  "open_questions": ["..."],
+  "dead_ends": ["what failed + why"],
+  "resume_prompt": "A ready-to-paste prompt to start the next session"
+}
+
+Summaries:
+${JSON.stringify(results, null, 2)}`;
+}
