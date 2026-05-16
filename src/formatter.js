@@ -1,7 +1,7 @@
 import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 
-export function buildMarkdown(data, source = "unknown") {
+export function buildMarkdown(data) {
   const timestamp = new Date().toISOString();
 
   const snippets =
@@ -23,7 +23,6 @@ ${s.code}
 
   return `# Context Bridge — Session Handoff
 Generated: ${timestamp}
-Source: ${source}
 
 ## Goal
 ${data.goal}

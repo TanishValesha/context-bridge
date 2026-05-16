@@ -13,6 +13,7 @@ import { getHistory } from "./history.js";
 import chalk from "chalk";
 import { statSync } from "fs";
 import { join } from "path";
+import { resumeSession } from "./resumeFunction.js";
 
 let outDir = "./output";
 
@@ -28,6 +29,10 @@ program
   .description("Compress a transcript into a handoff markdown file")
   .option("--file <path>", "Path to transcript file")
   .option("--paste", "Read transcript from clipboard")
+  .option(
+    "--resume <ai>",
+    "Auto-open a new session in browser (claude, chatgpt, gemini)",
+  )
   .option("--out <dir>", "Output directory", "./output")
   .action(async (options) => {
     const raw = loadTranscript(options);
@@ -48,6 +53,10 @@ program
 
     console.log(chalk.green(`\nHandoff saved to: ${filepath}`));
     console.log(chalk.green("Handoff copied to clipboard"));
+
+    if (options.resume) {
+      resumeSession(options.resume, markdown, result);
+    }
   });
 
 program
